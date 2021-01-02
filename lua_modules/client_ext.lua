@@ -284,7 +284,6 @@ function Client:CountHateList(cond)
 	
 	return ret;
 end
-
 function Client:GetGroupMemberCount()
 	-- group member count with support for raid groups
 	local raid = self:GetRaid()

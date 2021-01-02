@@ -24,7 +24,6 @@ function eq.ClassType(class)
 	elseif(class == 2 or class == 10 or class == 6) then
 		return "priest";
 	end
-
 	return "other";
 end
 
@@ -217,3 +216,5 @@ function eq.seconds(duration_str)
 	local s = duration_str:match("(%d+)s") or 0
 	return s + (m * 60) + (h * 3600) + (d * 86400) + (w * 604800)
 end
+
+eq.iq = require 'lua_modules/item_quest'
