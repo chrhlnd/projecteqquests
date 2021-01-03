@@ -78,9 +78,12 @@ iq.clear_current = function(cid)
 	eq.delete_data(current)
 end
 
-iq.last_targets = function(cid)
+iq.last_targets = function(cid,client)
 	local d = eq.get_data(string.format("iq-target-%d", cid))
 	if d ~= nil and string.len(d) > 0 then
+		if client then
+			client:Message(10, "here z")
+		end
 		return iq.unpack_target(d)
 	end
 	return nil
@@ -100,6 +103,28 @@ iq.clear_all = function(cid)
 	iq.clear_current(cid)
 end
 
+iq.check_all_targets_dead = function(cid, client)
+	local ret = true
+	local target = iq.last_targets(cid)
+	if target ~= nil then
+		for k,mobid in pairs(target.mobs) do
+			if iq.isTargetMob(mobid,client) then
+				ret = false
+			end
+		end
+	end
+	return ret
+end
+
+iq.end_if_all_targets_dead = function(cid,client)
+	if iq.check_all_targets_dead(cid, client) then
+		iq.clear_all(cid)
+		client:Message(15, "[ItemQuest] all targets dead")
+		return true
+	end
+	return false
+end
+
 iq.check_clear_target_dead = function(cid, mob, client)
 	local target = iq.last_targets(cid)
 	if target ~= nil then
@@ -114,6 +139,11 @@ iq.check_clear_target_dead = function(cid, mob, client)
 			end
 		end
 	end
+end
+
+iq.has_last_targets = function(cid,client)
+	local detail = eq.get_data(string.format("iq-target-%d", cid))
+	return detail and detail.mobs
 end
 
 iq.set_last_targets = function(cid, mobids, zone, zoneName)
@@ -137,26 +167,78 @@ end
 
 iq.report = function(cid, client)
 	local last = iq.last_targets(cid)
+	local ret = false
+
+	--if client then
+	--	client:Message(10, "reporting  " .. table.encode(last))
+	--end	
 
 	if last ~= nil then
 		local list =  eq.get_entity_list()
 		for k,mobid in pairs(last.mobs) do
-			local m = list:GetNPCByID(mobid)
-			if m ~= nil and not m:IsCorpse() then
-    			client:Message(15, string.format("[%s] %s is still waiting to be killed.", last.zoneName, m:GetName()))
+			-- if client then
+			-- 	client:Message(10, "checking mob id: " .. tostring(mobid))
+			-- end	
+			if iq.isTargetMob(mobid,client) then
+				local m = list:GetNPCByID(mobid)
+    				client:Message(15, string.format("[%s] %s is still waiting to be killed.", last.zoneName, m:GetCleanName()))
+				ret = true
 			end
 		end
 	end
+	return ret
 end
 
-iq.isspawned = function(cid)
+iq.isTargetMob = function(mobid,client)
+	local list = eq.get_entity_list()
+	local o    = list:GetNPCByID(mobid)
+	if o then
+		local iqt = o:GetEntityVariable("iqt")
+		if tostring(iqt) == tostring(mobid) then
+			-- if client then
+			-- 	client:Message(10, "Checking mob id " .. tostring(mobid) .. " for iqt var: " .. tostring(iqt))
+			-- end
+			return true
+		end
+	end
+	return false
+end
+
+iq.tagTargetMob = function(mobid,client)
+	--if client then
+	--	client:Message(10, "in tag here")
+	--end
+	local list = eq.get_entity_list()
+	local o    = list:GetNPCByID(mobid)
+	if client then
+		-- client:Message(10, "here 2")
+		-- client:Message(10, "Trying to tag taget " .. tostring(mobid) .. " obj is " .. tostring(o))
+	end
+	if o then
+		local val = tostring(mobid)
+		-- if client then
+			-- client:Message(10, "Set iqt var to " .. val)
+		-- end
+		o:SetEntityVariable("iqt", val)
+		-- if client then
+		-- 	client:Message(10, "here 3")
+		-- end
+		return true
+	end
+	-- client:Message(10, "nope")
+	return false
+end
+
+iq.isspawned = function(cid,client)
 	local last = iq.last_targets(cid)
 
 	if last ~= nil then
 		local list =  eq.get_entity_list()
+		-- if client then
+		-- 	client:Message(15, "Here")
+		--end
 		for k,mobid in pairs(last.mobs) do
-			local m = list:GetNPCByID(mobid)
-			if m ~= nil then
+			if iq.isTargetMob(mobid,client) then
 				return true
 			end
 		end
@@ -170,9 +252,11 @@ iq.depop_last = function(cid)
 	if last ~= nil then
 		local list =  eq.get_entity_list()
 		for k,mobid in pairs(last.mobs) do
-			local m = list:GetNPCByID(mobid)
-			if m ~= nil then
-				m:Despawn()
+			if iq.isTargetMob(mobid) then
+				local m = list:GetNPCByID(mobid)
+				if m ~= nil then
+					m:Despawn()
+				end
 			end
 		end
 	end
@@ -205,6 +289,12 @@ end
 
 iq.check_zone_spawn = function(detail, client)
 	local thiszoneid = eq.get_zone_id()
+
+	if not thiszoneid or not detail or not detail.zid then
+		client:Message(15, string.format("invalid zone data"))
+		return
+	end	
+
 	if tonumber(thiszoneid) == tonumber(detail.zid) then
 		local dropP  = detail.pctd
 		local spawnP = detail.pcts
@@ -248,7 +338,8 @@ iq.check_zone_spawn = function(detail, client)
 		end
 
 		local id = target:GetID();
-
+		-- client:Message(10, "Tagging mob [" .. tostring(id) .. "]")
+		iq.tagTargetMob(id,client);
 		iq.set_last_targets(client:CharacterID(), {[1] = id}, thiszoneid, detail.zn);
 
 		local npc = target:CastToNPC()

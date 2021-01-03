@@ -3,6 +3,8 @@
 local commands_path = "lua_modules/commands/";
 local commands      = { };
 
+require('lua_modules/tab_serialize')
+
 local function last_zone(e)
 	eq.debug("yo")
 	local last = e.self:GetEntityVariable("lastZone")
@@ -16,6 +18,7 @@ commands["timeleft"]    = { 0,   require(commands_path .. "time_left") };
 commands["iqpickapply"] = { 0,   require(commands_path .. "iq_set") };
 commands["iq-clear"]    = { 10,  require(commands_path .. "iq_set") };
 commands["iq-status"]   = { 0,   require(commands_path .. "iq_set") };
+commands["iq-spawn"]    = { 0,   require(commands_path .. "iq_set") };
 commands["last-zone"]   = { 0,   last_zone };
 commands["info"]        = { 0,   require(commands_path .. "info") };
 commands["void"]        = { 0,   require(commands_path .. "void") };
