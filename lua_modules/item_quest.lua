@@ -117,6 +117,10 @@ iq.check_all_targets_dead = function(cid, client)
 end
 
 iq.end_if_all_targets_dead = function(cid,client)
+	if not iq.is_in_target_zone(cid) then
+		return false
+	end
+
 	if iq.check_all_targets_dead(cid, client) then
 		iq.clear_all(cid)
 		client:Message(15, "[ItemQuest] all targets dead")
@@ -159,13 +163,18 @@ end
 iq.report_cached = function(cid, client)
 	local detail = iq.get_current(cid)
 	if detail.zn ~= nil then
-		client:Message(15, string.format("[%s] %s is still waiting to be killed.", detail.zn or "", detail.nme or ""))
+		client:Message(15, string.format("%s is still waiting to be killed in %s", detail.nme or "",  detail.zn or ""))
 	else
 		client:Message(15, string.format("No item quest at this time."))
 	end
 end
 
 iq.report = function(cid, client)
+	if not iq.is_in_target_zone(cid) then
+		iq.report_cached(cid,client)
+		return
+	end
+
 	local last = iq.last_targets(cid)
 	local ret = false
 
@@ -181,7 +190,7 @@ iq.report = function(cid, client)
 			-- end	
 			if iq.isTargetMob(mobid,client) then
 				local m = list:GetNPCByID(mobid)
-    				client:Message(15, string.format("[%s] %s is still waiting to be killed.", last.zoneName, m:GetCleanName()))
+    				client:Message(15, string.format("[%s] %s is still waiting to be killed!", last.zoneName, m:GetCleanName()))
 				ret = true
 			end
 		end
@@ -287,19 +296,62 @@ local function randomPos(target, x, y, z, h, range)
 	end
 end
 
+iq.on_zone_in = function(client)
+	-- client:Message(10, "calling on_zone_in")
+
+	local cid = client:CharacterID()
+	if not cid then
+		return
+	end
+
+	local detail = iq.get_current(cid)
+	if not detail or not detail.zid then
+		iq.set_current(cid)
+		detail = iq.get_current(cid)
+	end
+
+	if not detail or not detail.zid then
+		client:Message(10, "item-quest: no targets picked.")
+		return
+	end
+
+	if not iq.is_in_target_zone(cid) then
+		client:Message(10, "item-quest: not in target zone - " .. tostring(detail.zn))
+		return
+	end
+
+	iq.check_zone_spawn(detail, client)
+	if detail and detail.zn then
+		client:Message(15, string.format("%s has been targeted in %s", detail.nme, detail.zn));
+	else
+		client:Message(10, "item-quest: no targets")
+	end
+end
+
+iq.is_in_target_zone = function(cid)
+	local thiszoneid = eq.get_zone_id()
+	detail = eq.iq.get_current(cid)
+	if detail.zid and tonumber(thiszoneid) == tonumber(detail.zid) then
+		return true
+	end
+	return false
+end
+
 iq.check_zone_spawn = function(detail, client)
 	local thiszoneid = eq.get_zone_id()
 
 	if not thiszoneid or not detail or not detail.zid then
-		client:Message(15, string.format("invalid zone data"))
 		return
 	end	
 
 	if tonumber(thiszoneid) == tonumber(detail.zid) then
+		if iq.isspawned(client:CharacterID(), client) then
+			client:Message(10, "item-quest: already spawned returning")
+			return
+		end
+
 		local dropP  = detail.pctd
 		local spawnP = detail.pcts
-
-		iq.depop_last(client:AccountID())
 
 		local scale  = 3 * ((100 - (dropP * spawnP))/100)
 		local dscale = 5 * ((100 - (dropP * spawnP))/100)

@@ -22,6 +22,7 @@ commands["iq-spawn"]    = { 0,   require(commands_path .. "iq_set") };
 commands["last-zone"]   = { 0,   last_zone };
 commands["info"]        = { 0,   require(commands_path .. "info") };
 commands["void"]        = { 0,   require(commands_path .. "void") };
+commands["wdrobe"]      = { 0,   require(commands_path .. "wdrobe") };
 
 function eq.DispatchCommands(e)
 	-- eq.debug("[command.lua] got here in command - " .. (e.command or "unk"));

@@ -217,4 +217,8 @@ function eq.seconds(duration_str)
 	return s + (m * 60) + (h * 3600) + (d * 86400) + (w * 604800)
 end
 
+require 'lua_modules/tab_serialize'
 eq.iq = require 'lua_modules/item_quest'
+eq.wd = require 'lua_modules/wardrobe'
+
+

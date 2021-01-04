@@ -20,16 +20,13 @@ local function iq_set(e)
 	end
 
 	local detail = eq.iq.last_picked(cid)
-	
-	-- e.self:Message(10, string.format("Detail %s", table.encode(detail)))
-
-	-- e.self:Message(15, "SETTING CURRENT")
 	eq.iq.set_current(cid)
-	-- e.self:Message(15, "check spawn")
 	eq.iq.check_zone_spawn(detail, e.self)
-
 	detail = eq.iq.get_current(cid)
-
+	if not detail.zn then
+		e.self:Message(15, "item-quest: no target")
+		return
+	end
 	e.self:Message(15, string.format("%s has been targeted in %s", detail.nme, detail.zn));
 	return true
 end
